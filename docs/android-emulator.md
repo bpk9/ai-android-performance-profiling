@@ -71,4 +71,4 @@ Use the same `ANDROID_AVD_NAME` in both steps if you override it.
 
 ## Keeping this doc accurate
 
-After editing the scripts or defaults here, use the **sync-profiling-docs** Cursor skill (`.cursor/skills/sync-profiling-docs/SKILL.md`) so this file and `AGENTS.md` stay consistent with the shell sources.
+After editing the scripts or defaults here, re-read `scripts/create_android_sim.sh` and `scripts/open_android_sim.sh` and update this file and [AGENTS.md](../AGENTS.md) so tables, env vars, and links stay consistent with the shell sources.
