@@ -1,0 +1,20 @@
+[
+  {
+    "content-desc": "Home",
+    "text": "",
+    "center": "[120, 2800]",
+    "state": []
+  },
+  {
+    "content-desc": "Explore, tab",
+    "text": "Explore",
+    "center": "[540,2805]",
+    "state": []
+  },
+  {
+    "content-desc": "Explore, tab",
+    "text": "Explore",
+    "center": "[540,2805]",
+    "state": ["selected"]
+  }
+]

@@ -28,7 +28,7 @@ Improve measurable app and navigation performance on Android (emulator and real 
 | ----- | -------- | -------- |
 | **skill-creator** | Creating or refining Agent Skills, evals, or description/trigger tuning. | [`.agents/skills/skill-creator/SKILL.md`](.agents/skills/skill-creator/SKILL.md) |
 | **vercel-react-native-skills** | React Native / Expo: lists, animations, navigation, rendering, native modules, mobile performance. | [`.agents/skills/vercel-react-native-skills/SKILL.md`](.agents/skills/vercel-react-native-skills/SKILL.md) |
-| **android-cli-layout-tap** | Terminal emulator UI: `android layout` JSON, `center` → `adb shell input tap`, verify taps / UI state. | [`.agents/skills/android-cli-layout-tap/SKILL.md`](.agents/skills/android-cli-layout-tap/SKILL.md) |
+| **android-cli-layout-tap** | Emulator UI: discover **`scripts/android-ui-flows/`**, `layout` → **`layout_find_tap.mjs`** → tap; record flows from **`_template_flow.sh`**. | [`.agents/skills/android-cli-layout-tap/SKILL.md`](.agents/skills/android-cli-layout-tap/SKILL.md) (agents: [`SKILLS.md`](.agents/skills/android-cli-layout-tap/SKILLS.md), humans: [`README.md`](.agents/skills/android-cli-layout-tap/README.md)) |
 
 Install or upgrade via [Skills CLI](https://skills.sh) (`npx skills add …`, `npx skills update`) or [`scripts/upgrade_npx_skills.sh`](scripts/upgrade_npx_skills.sh). **Convention:** keep all skills for this repo under [`.agents/skills/`](.agents/skills/) (including custom manifests added by hand).
 
@@ -38,7 +38,9 @@ Create and open a profiling-oriented AVD with [`scripts/create_android_sim.sh`](
 
 ### Emulator UI automation (Android CLI + adb)
 
-For scripted taps: Android CLI **`layout`** (JSON, **`center`** as `"[x,y]"`) → **`adb shell input tap x y`**. Re-check with **`layout`** or **`android screen capture`**. Follow **android-cli-layout-tap**: [`.agents/skills/android-cli-layout-tap/SKILL.md`](.agents/skills/android-cli-layout-tap/SKILL.md). [Android CLI](https://developer.android.com/tools/agents/android-cli).
+For scripted taps: Android CLI **`layout`** (JSON, **`center`** as `"[x,y]"`) → **`adb shell input tap x y`**. Re-check with **`layout`** or **`android screen capture`**.
+
+**Record → replay:** Before improvising, look for **`scripts/android-ui-flows/*.sh`** (reusable flows). If none fit, follow the **Agent UI automation flow** in **android-cli-layout-tap** (screenshot → **`layout_find_tap.mjs`** → poll ~**5s** → save a new flow from **`scripts/android-ui-flows/_template_flow.sh`**). Agent detail: [`.agents/skills/android-cli-layout-tap/SKILLS.md`](.agents/skills/android-cli-layout-tap/SKILLS.md); overview: [`.agents/skills/android-cli-layout-tap/README.md`](.agents/skills/android-cli-layout-tap/README.md). [Android CLI](https://developer.android.com/tools/agents/android-cli).
 
 ## Key metrics (reference)
 
