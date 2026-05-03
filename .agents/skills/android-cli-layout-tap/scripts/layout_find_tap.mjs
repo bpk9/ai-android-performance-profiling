@@ -19,6 +19,11 @@ function usage(stream = stdout) {
   [--desc-contains S] [--not-desc-contains S] [--text-contains S] [--state-contains S]
   [--nth N] [--list] [--compact] [--max-list N] [--list-all-labels]
   [--json] [--explain] [--suggest N] [--label-width W] [--adb [SERIAL]]
+  [--batch-json FILE]
+
+Batch: -f LAYOUT.json --batch-json STEPS.json (FILE may be - for stdin; layout must use -f).
+  STEPS is a JSON array of objects with optional keys: find, minScore, desc, ndesc, text, state, nth, explain.
+  Stdout: one "x y" line per step, or one JSON array with --json.
 
 Pipe: android layout --device=SERIAL -p | layout_find_tap.mjs [--find ...]
 `);
@@ -49,6 +54,7 @@ function parseArgs(argv) {
     labw: 72,
     adbMode: false,
     adbSerial: "",
+    batchJson: "",
   };
   const skipEnv = (process.env.LAYOUT_FIND_TAP_SKIP_SUGGEST || "").toLowerCase();
   o.skip = /^(1|true|yes)$/.test(skipEnv) ? 1 : 0;
@@ -126,6 +132,9 @@ function parseArgs(argv) {
         }
         break;
       }
+      case "--batch-json":
+        o.batchJson = need();
+        break;
       default:
         stderr.write(`layout_find_tap: unknown option: ${a}\n`);
         usage(stderr);
@@ -506,6 +515,103 @@ function readInput(opts) {
   return opts.file ? readFileSync(opts.file, "utf8") : readFileSync(0, "utf8");
 }
 
+function readBatchSpec(path) {
+  const text = path === "-" ? readFileSync(0, "utf8") : readFileSync(path, "utf8");
+  let j;
+  try {
+    j = JSON.parse(text);
+  } catch (e) {
+    die(`layout_find_tap: invalid batch JSON: ${e.message}`, 2);
+  }
+  if (!Array.isArray(j)) die("layout_find_tap: --batch-json must be a JSON array", 2);
+  return j;
+}
+
+/** Per-step options for --batch-json (single layout parse, many matches). */
+function optsForBatchStep(globalOpts, item, i) {
+  if (item == null || typeof item !== "object") {
+    die(`layout_find_tap: batch step ${i} must be an object`, 2);
+  }
+  const g = globalOpts;
+  return {
+    file: g.file,
+    find: String(item.find ?? ""),
+    minScore: Number(item.minScore ?? g.minScore),
+    desc: String(item.desc ?? ""),
+    ndesc: String(item.ndesc ?? ""),
+    text: String(item.text ?? ""),
+    state: String(item.state ?? ""),
+    nth: Number(item.nth ?? 0),
+    list: false,
+    compact: g.compact,
+    maxList: g.maxList,
+    listAll: false,
+    json: false,
+    explain: Boolean(item.explain) || g.explain,
+    suggest: g.suggest,
+    labw: g.labw,
+    adbMode: false,
+    adbSerial: "",
+    skip: g.skip,
+  };
+}
+
+function validateBatchWithSingleMode(opts) {
+  if (opts.find !== "")
+    die("layout_find_tap: do not combine --find with --batch-json; use batch JSON objects", 2);
+  if (opts.desc !== "" || opts.ndesc !== "" || opts.text !== "" || opts.state !== "")
+    die(
+      "layout_find_tap: do not combine filter flags with --batch-json; use batch JSON objects",
+      2,
+    );
+  if (opts.list || opts.listAll || opts.adbMode)
+    die("layout_find_tap: --list / --list-all-labels / --adb are incompatible with --batch-json", 2);
+}
+
+function mainBatch(rows, globalOpts, batchQueries) {
+  if (batchQueries.length === 0) die("layout_find_tap: empty --batch-json array", 2);
+
+  const out = [];
+  for (let i = 0; i < batchQueries.length; i++) {
+    const optsStep = optsForBatchStep(globalOpts, batchQueries[i], i);
+    const matches = buildMatches(rows, optsStep);
+    const hint = `${optsStep.find} ${optsStep.desc} ${optsStep.text}`.trim();
+    if (matches.length === 0) {
+      stderr.write(`layout_find_tap: batch step ${i} (of ${batchQueries.length}) — no match\n`);
+      emitNoMatch(rows, hint, optsStep);
+    }
+    const nm = matches.length;
+    if (optsStep.nth < 0 || optsStep.nth >= nm) {
+      stderr.write(
+        `layout_find_tap: batch step ${i}: nth ${optsStep.nth} out of range (${nm} matches)\n`,
+      );
+      process.exit(1);
+    }
+    const pick = matches[optsStep.nth];
+    if (optsStep.explain) {
+      stderr.write(
+        `layout_find_tap: batch step ${i} idx=${pick.idx} score=${pick.sc.toFixed(2)} label='${pick.lb}'\n`,
+      );
+    }
+    out.push({
+      x: pick.x,
+      y: pick.y,
+      idx: pick.idx,
+      score: round4(pick.sc),
+      label: pick.lb,
+      "content-desc": pick.desc,
+      text: pick.text,
+    });
+  }
+  if (globalOpts.json) {
+    stdout.write(JSON.stringify(out) + "\n");
+  } else {
+    for (const p of out) {
+      stdout.write(`${p.x} ${p.y}\n`);
+    }
+  }
+}
+
 function mainSync(rows, opts) {
   if (rows.length === 0) {
     stderr.write("layout_find_tap: invalid JSON or empty nodes\n");
@@ -589,6 +695,36 @@ function mainSync(rows, opts) {
 
 function main() {
   const opts = parseArgs(process.argv.slice(2));
+
+  if (opts.batchJson) {
+    validateBatchWithSingleMode(opts);
+    if (!opts.file) die("layout_find_tap: --batch-json requires -f LAYOUT.json (layout stdin is ambiguous)", 2);
+    if (opts.batchJson === "-" && opts.file === "-") {
+      die("layout_find_tap: use -f FILE for layout when --batch-json reads stdin", 2);
+    }
+    let text;
+    try {
+      text = readFileSync(opts.file, "utf8");
+    } catch (e) {
+      die(`layout_find_tap: cannot read layout file: ${e.message}`, 2);
+    }
+    const batchQueries = readBatchSpec(opts.batchJson);
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      die(`layout_find_tap: invalid layout JSON: ${e.message}`, 2);
+    }
+    let rows;
+    try {
+      rows = extractRows(parsed);
+    } catch (e) {
+      die(`layout_find_tap: invalid layout: ${e.message}`, 2);
+    }
+    mainBatch(rows, opts, batchQueries);
+    return;
+  }
+
   let text;
   try {
     text = readInput(opts);

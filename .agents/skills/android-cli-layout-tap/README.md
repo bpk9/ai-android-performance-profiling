@@ -39,8 +39,9 @@ Agent procedure (same flow, with commands and pitfalls): [SKILLS.md](./SKILLS.md
 
 ## What gets checked in
 
-Reusable automation lives in **`scripts/android-ui-flows/*.sh`**. New flows start from **`scripts/android-ui-flows/_template_flow.sh`**. Bundled helpers live in **`scripts/`** next to this README (**`layout_find_tap.mjs`**, `layout_stream_tap.sh`, plus tap-run, dump-to-file, label listing, screenshot, and boot-wait scripts — see **SKILLS.md**).
+Reusable automation lives in **`scripts/android-ui-flows/*.sh`** (repo root). New flows start from **`scripts/android-ui-flows/_template_flow.sh`**. Tap/layout helpers live under **`.agents/skills/android-cli-layout-tap/scripts/`** — set **`SK`** to that path from the repo root; primary entry is **`layout_cli.sh`** (**tap**, **coords**, **labels**, **dump**, **batch-tap**). Thin wrappers delegate there. **`layout_find_tap.mjs`** supports **`--batch-json`**. Repo-root **`scripts/metro_dev_*.sh`** pair Metro dev maps with **`metro-symbolicate`**; **`scripts/build_android_app.sh`** + **`app/dist/native-sourcemaps/android/*.map`** cover **embedded** APKs — see **SKILLS.md** → **Agent learnings: JS symbolication**. For **jank → thread layer** (gfxinfo / Perfetto), see **`docs/android-performance-diagnostics.md`**.
 
 ## External links
 
-- [Android CLI overview](https://developer.android.com/tools/agents/android-cli) — `layout`, `screen capture`, emulator commands.
+- [Android CLI overview](https://developer.android.com/tools/agents/android-cli) — `layout`, `screen capture`, emulator, `docs search`, `init`, `skills`.
+- [Android CLI walkthrough (video)](https://www.youtube.com/watch?v=MLDkhDyvTVI) — terminal-first agent workflow, layout vs heavy XML dumps, optional annotate→resolve taps.
