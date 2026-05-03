@@ -69,6 +69,25 @@ Extra arguments are passed through to `emulator`, for example:
 
 Use the same `ANDROID_AVD_NAME` in both steps if you override it.
 
+## Frame stats and memory (gfxinfo compare)
+
+To capture **device-side rendering stats** and contrast a light screen with the **Long list** unvirtualized scroll harness:
+
+1. Start the app on the emulator or device (`ANDROID_SERIAL` if not `emulator-5554`).
+2. Run:
+
+   ```bash
+   ./scripts/collect_android_gfxinfo_compare.sh
+   ```
+
+The script resets **`dumpsys gfxinfo`** counters, stays idle on **Home** for a few seconds (baseline), prints trimmed metrics plus a **`meminfo` TOTAL** line, resets again, runs **`scripts/android-ui-flows/longlist-scroll-to-end-flow.sh`**, then prints the same extracts.
+
+**How to read the drop:** after **B**, expect **`Total attached Views`** (and the **`N views, … kB of render nodes`** line from gfxinfo) to be **much larger** than baseline **A** — that reflects mounting the full unvirtualized list. **`meminfo` TOTAL** PSS/RSS typically increases as well. **Janky frame %** can fluctuate with how many frames were rendered since the reset; use similar dwell times or repeat runs if you need to compare jank directly.
+
+Optional env: **`ANDROID_PACKAGE`**, **`OUTPUT_DIR`** (saves full **`dumpsys gfxinfo`** + **`meminfo`** per phase under that directory), **`BASELINE_IDLE_SEC`**.
+
+**Deeper diagnosis (Perfetto, Hermes, statistics):** [android-performance-diagnostics.md](android-performance-diagnostics.md) — root-cause layers, confidence intervals, and scripts (`run_perf_comparison_series.sh`, `perfetto_record_android.sh`).
+
 ## Keeping this doc accurate
 
 After editing the scripts or defaults here, re-read `scripts/create_android_sim.sh` and `scripts/open_android_sim.sh` and update this file and [AGENTS.md](../AGENTS.md) so tables, env vars, and links stay consistent with the shell sources.

@@ -25,17 +25,14 @@ adb() { command adb -s "$DEVICE" "$@"; }
 
 tap_by_find() {
   local label=$1
-  local out
-  out="$(android layout --device="$DEVICE" -p | node "$SK/layout_find_tap.mjs" --find "$label")" || return 1
-  read -r X Y <<<"$out"
-  adb shell input tap "$X" "$Y"
+  bash "$SK/layout_tap_run.sh" "$DEVICE" --find "$label"
 }
 
 wait_for_layout_find() {
   local label=$1
   local round
   for ((round = 1; round <= MAX_ROUNDS; round++)); do
-    if android layout --device="$DEVICE" -p | node "$SK/layout_find_tap.mjs" --find "$label" >/dev/null 2>&1; then
+    if bash "$SK/layout_stream_tap.sh" "$DEVICE" --find "$label" >/dev/null 2>&1; then
       return 0
     fi
     sleep "$POLL_SEC"
